@@ -22,7 +22,7 @@ defmodule PCA9685.Servo do
   and is_integer(address)
   and is_integer(channel)
   and channel >= 0
-  and channel <= 11
+  and channel <= 15
   do
     min   = Map.get(state, :min, @default_min)
     max   = Map.get(state, :max, @default_max)
