@@ -28,8 +28,17 @@ defmodule PCA9685.Device do
   @invrt               0x10
   @outdrv              0x04
 
+  @moduledoc """
+  Allows setting of PWM values and update frequency on a PCA9685 device.
+  """
+
+  @doc """
+  Connects to a PCA9685 device over the i2c bus using Elixir ALE.
+  """
+  @spec start_link(map) :: {:ok, pid}
   def start_link(config), do: GenServer.start_link(Device, [config])
 
+  @doc false
   def init([%{bus: bus, address: address}=state]) do
     with {:ok, pid} <- I2c.start_link(bus, address),
          state      <- Map.put(state, :pid, pid),
@@ -46,24 +55,41 @@ defmodule PCA9685.Device do
          do: {:ok, state}
   end
 
+  @doc """
+  Returns the currently configured PWM frequency.
+  """
+  @spec pwm_freq(pid) :: pos_integer
   def pwm_freq(pid),
     do: GenServer.call(pid, :pwm_freq)
 
+  @doc """
+  Returns the currently configured PWM frequency.
+  """
+  @spec pwm_freq(bus :: binary, address :: 0..0x7f) :: pos_integer
   def pwm_freq(bus, address)
     when is_binary(bus)
     and is_integer(address),
     do: pwm_freq({:via, :gproc, gproc_key(bus, address)})
 
+  @doc """
+  Configures the PWM frequency.
+  """
+  @spec pwm_freq(pid, pos_integer) :: :ok
   def pwm_freq(pid, hz)
     when is_number(hz),
     do: GenServer.cast(pid, {:pwm_freq, hz})
 
-    def pwm_freq(bus, address, hz)
-      when is_binary(bus)
-      and is_integer(address)
-      and is_number(hz),
-      do: pwm_freq({:via, :gproc, gproc_key(bus, address)}, hz)
+  @spec pwm_freq(bus :: binary, address :: 0..0x7f, pos_integer) :: :ok
+  def pwm_freq(bus, address, hz)
+    when is_binary(bus)
+    and is_integer(address)
+    and is_number(hz),
+    do: pwm_freq({:via, :gproc, gproc_key(bus, address)}, hz)
 
+  @doc """
+  Sets all channels to the specified duty cycle.
+  """
+  @spec all(pid, 0..4096, 0..4096) :: :ok
   def all(pid, on, off)
     when is_integer(on)
     and is_integer(off)
@@ -71,6 +97,10 @@ defmodule PCA9685.Device do
     and off >= 0 and off <= 4096,
     do: GenServer.cast(pid, {:all, on, off})
 
+  @doc """
+  Sets all channels to the specified duty cycle.
+  """
+  @spec all(bus :: binary, address :: 0..0x7f, 0..4096, 0..4096) :: :ok
   def all(bus, address, on, off)
     when is_binary(bus)
     and is_integer(address)
@@ -80,6 +110,10 @@ defmodule PCA9685.Device do
     and off >= 0 and off <= 4096,
     do: all({:via, :gproc, gproc_key(bus, address)}, on, off)
 
+  @doc """
+  Sets the channel to a specified duty cycle.
+  """
+  @spec channel(pid, 0..15, 0..4096, 0..4096) :: :ok
   def channel(pid, channel_no, on, off)
     when is_integer(channel_no)
     and is_integer(on)
@@ -89,6 +123,10 @@ defmodule PCA9685.Device do
     and off >= 0 and off <= 4096,
     do: GenServer.cast(pid, {:channel, channel_no, on, off})
 
+  @doc """
+  Sets the channel to a specified duty cycle.
+  """
+  @spec channel(bus :: binary, address :: 0..0x7f, 0..15, 0..4096, 0..4096) :: :ok
   def channel(bus, address, channel_no, on, off)
     when is_binary(bus)
     and is_integer(address)
@@ -100,22 +138,26 @@ defmodule PCA9685.Device do
     and off >= 0 and off <= 4096,
     do: channel({:via, :gproc, gproc_key(bus, address)}, channel_no, on, off)
 
+  @doc false
   def handle_call(:pwm_freq, _from, state) do
     hz = Map.get(state, :pwm_freq)
     {:reply, hz, state}
   end
 
+  @doc false
   def handle_cast({:pwm_freq, hz}, %{pid: pid}=state) do
     :ok    = do_set_pwm_freq(pid, hz)
      state = Map.put(state, :pwm_freq, hz)
      {:noreply, state}
   end
 
+  @doc false
   def handle_cast({:all, on, off}, state) do
     :ok = do_set_all_pwm(state, on, off)
     {:noreply, state}
   end
 
+  @doc false
   def handle_cast({:channel, channel_no, on, off}, state) do
     :ok = do_set_pwm(state, channel_no, on, off)
     {:noreply, state}
