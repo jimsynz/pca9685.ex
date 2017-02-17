@@ -102,7 +102,7 @@ defmodule PCA9685.Servo do
     set_position(state, position)
   end
 
-  defp set_initial_position(_state), do: :ok
+  defp set_initial_position(state), do: state
 
   defp set_position(%{pid: pid, channel: channel}=state, position) do
     pwm = scale(state, position)
